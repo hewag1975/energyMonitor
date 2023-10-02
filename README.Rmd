@@ -1,0 +1,66 @@
+---
+title: "Energy monitor"
+output: github_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(data.table)
+library(ggplot2)
+```
+
+## Introduction
+
+Trying to reduce our private consumption of electricity and natural gas I started 
+to collect weekly readings from our gas and electricity meter. 
+
+Data is manually collected via a data sheet (`raw/energymonitor.ods`) and then 
+visualized using R and `ggplot2`.
+
+## Data preparation
+
+Data is imported from the spreadsheet (here LibreOffice Calc format `ods`) as a 
+`data.table` object, the latest (and yet empty) rows of the template are 
+removed and only the columns of interest are selected. 
+
+```{r}
+rdg = readODS::read_ods(
+  "data/energymonitor.ods"
+  , sheet = "data"
+) |> 
+  subset(!is.na(rdg_gas)) |> 
+  subset(select = c("date", "rdg_gas", "rdg_pow")) |> 
+  as.data.table()
+
+rdg[, date := as.POSIXct(date, format = "%m/%d/%Y")]
+rdg[, week := strftime(date, format = "%V")]
+
+head(rdg)
+```
+
+The gas meter records the natural gas consumption continuously in 
+cubic meters. To convert cubic meters readings to kWh per week one has to 
+
+* calculate the difference of successive readings. 
+* multiply the difference with two factors, the calorific value (German: "Brennwert") 
+and the volume correction factor (German: "Zustandszahl"). If these are unknown, 
+a good estimate can be achieved by multiplying the cubic meters with 10. In my 
+case, I took both factors from the last invoice of my provider. 
+
+For electricity, consumption is recorded in kWh, so taking the difference gives 
+the consumption per week. 
+
+```{r}
+cbm2kwh = 0.9355 * 11.517 
+
+rdg[, use_pow := c(NA_real_, diff(rdg_pow))]
+rdg[, use_gas := c(NA_real_, diff(rdg_gas))]
+rdg[, use_gas_kwh := use_gas * cbm2kwh]
+
+head(rdg)
+```
+
+
