@@ -1,6 +1,7 @@
 ---
-title: "Energy Monitor"
+title: "Weekly energy consumption"
 format: html
+theme: yeti
 editor: visual
 editor_options: 
   chunk_output_type: console
@@ -13,11 +14,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(data.table)
 library(ggplot2)
-library(ggplotly)
+library(plotly)
 ```
-
-## Weekly consumption 
-
 
 ```{r}
 #| label: import
@@ -65,9 +63,8 @@ rdg[doy <= 0, season := season - 1L]
 rdg[doy <= 0, doy := doy + offset_dec]
 rdg[, c("offset_jul", "offset_dec") := NULL]
 
-rdg[, lab := substring(date, first = 6)]
+rdg[, lab := format(date, format = "%Y-%b-%d")]
 ```
-
 
 ```{r}
 #| label: preparation
@@ -89,78 +86,123 @@ rdg[, cum_gas_kwh := cumsum(cum_gas_kwh), by = season]
 
 rdg = melt(
   rdg
-  ,id.vars = c("date", "season", "doy", "lab")
+  ,id.vars = c("season", "doy", "lab")
   , measure.vars = c("use_gas_kwh", "use_pow_kwh", "cum_gas_kwh", "cum_pow_kwh")
   , value.name = "use"
   , variable.name = "type"
   , na.rm = TRUE
 )
+
+rdg[, use := round(use, digits = 1L)]
+
+setnames(
+  rdg
+  , old = c(
+    "Season"
+    , "Day"
+    , "Date"
+    , "Type"
+    , "Consumption"
+  )
+)
 ```
+
+::: {.panel-tabset}
+
+## Natural gas
 
 ```{r}
 #| label: plt-gas
+#| echo: false
 #| fig-width: 10
 #| fig-height: 8
-
-ggplot(
-  rdg[grep("gas", x = type)]
-  ,  mapping = aes(doy, y = use, color = factor(season), group = season)
-) + 
-  geom_line() + 
-  scale_x_continuous("") + 
-  scale_y_continuous("Consumption [kWh]") + 
-  scale_color_manual(
-    ""
-    , values = c(
-      "2022" = "gray80"
-      , "2023" = "gray20"
+ggplotly(
+  ggplot(
+    rdg[grep("gas", x = Type)]
+    ,  mapping = aes(
+      Day
+      , y = Consumption
+      , color = factor(Season)
+      , group = Season
+      , label = Date
     )
   ) + 
-  facet_wrap(
-    "type"
-    , ncol = 1
-    , scales = "free_y"
-    , labeller = as_labeller(
-      c(
-        use_gas_kwh = "gas [kWh]"
-        , cum_gas_kwh = "gas [kWh]"
+    geom_line() + 
+    scale_x_continuous("Day of year") + 
+    scale_y_continuous(
+      ""
+      , expand = expansion(c(0.25, 0.25))
+    ) + 
+    scale_color_manual(
+      ""
+      , values = c(
+        "2022" = "gray80"
+        , "2023" = "gray20"
       )
-    )
-  ) +
-  theme_bw() + 
-  theme(legend.position = "none")
+    ) + 
+    facet_wrap(
+      "Type"
+      , ncol = 1
+      , scales = "free_y"
+      , labeller = as_labeller(
+        c(
+          use_gas_kwh = "Natural gas [kWh]"
+          , cum_gas_kwh = "Natural gas [kWh]"
+        )
+      )
+    ) +
+    theme_bw() + 
+    theme(legend.position = "none")
+  , tooltip = c("Consumption", "Date", "Season")
+)
 ```
+
+## Electricity
 
 ```{r}
 #| label: plt-pow
-#| #| fig-width: 10
+#| echo: false
+#| fig-width: 10
 #| fig-height: 8
-ggplot(
-  rdg[grep("pow", x = type)]
-  ,  mapping = aes(doy, y = use, color = factor(season), group = season)
-) + 
-  geom_line() + 
-  scale_x_continuous("") + 
-  scale_y_continuous("Consumption [kWh]") + 
-  scale_color_manual(
-    ""
-    , values = c(
-      "2022" = "gray80"
-      , "2023" = "gray20"
+ggplotly(
+  ggplot(
+    rdg[grep("pow", x = Type)]
+    ,  mapping = aes(
+      Day
+      , y = Consumption
+      , color = factor(Season)
+      , group = Season
+      , label = Date
     )
   ) + 
-  facet_wrap(
-    "type"
-    , ncol = 1
-    , scales = "free_y"
-    , labeller = as_labeller(
-      c(
-        use_pow_kwh = "pow [kWh]"
-        , cum_pow_kwh = "pow [kWh]"
+    geom_line() + 
+    scale_x_continuous("Day of year") + 
+    scale_y_continuous(
+      ""
+      , expand = expansion(c(0.25, 0.25))
+    ) + 
+    scale_color_manual(
+      ""
+      , values = c(
+        "2022" = "gray80"
+        , "2023" = "gray20"
       )
-    )
-  ) +
-  theme_bw() + 
-  theme(legend.position = "none")
+    ) + 
+    facet_wrap(
+      "Type"
+      , ncol = 1
+      , scales = "free_y"
+      , labeller = as_labeller(
+        c(
+          use_pow_kwh = "Power [kWh]"
+          , cum_pow_kwh = "Power [kWh]"
+        )
+      )
+    ) +
+    theme_bw() + 
+    theme(legend.position = "none")
+  , tooltip = c("Consumption", "Date", "Season")
+)
 ```
 
+:::
