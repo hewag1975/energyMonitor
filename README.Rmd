@@ -119,7 +119,7 @@ this ends up in 2*2 plots.
 
 ```{r}
 rdg = melt(
-  rdg
+  rdg[season == 2022]
   ,id.vars = c("date", "season", "doy", "lab")
   , measure.vars = c("use_gas_kwh", "use_pow_kwh", "cum_gas_kwh", "cum_pow_kwh")
   , value.name = "use"
@@ -164,7 +164,7 @@ ggplot(
 
 ```{r}
 #| label: plt-pow
-#| #| fig-width: 10
+#| fig-width: 10
 #| fig-height: 8
 ggplot(
   rdg[grep("pow", x = type)]

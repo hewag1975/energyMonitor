@@ -113,7 +113,7 @@ electricity. So, finally this ends up in 2\*2 plots.
 
 ``` r
 rdg = melt(
-  rdg
+  rdg[season == 2022]
   ,id.vars = c("date", "season", "doy", "lab")
   , measure.vars = c("use_gas_kwh", "use_pow_kwh", "cum_gas_kwh", "cum_pow_kwh")
   , value.name = "use"
