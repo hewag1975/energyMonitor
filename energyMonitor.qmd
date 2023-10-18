@@ -1,0 +1,166 @@
+---
+title: "Energy Monitor"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+#| label: setup
+#| include: false
+knitr::opts_chunk$set(echo = TRUE)
+
+library(data.table)
+library(ggplot2)
+library(ggplotly)
+```
+
+## Weekly consumption 
+
+
+```{r}
+#| label: import
+#| include: false
+rdg = readODS::read_ods(
+  "data/energymonitor.ods"
+  , sheet = "data"
+) |> 
+  subset(!is.na(rdg_gas)) |> 
+  subset(select = c("date", "rdg_gas", "rdg_pow")) |> 
+  as.data.table()
+
+rdg[, date := as.POSIXct(date, format = "%m/%d/%Y")]
+rdg[, season := year(date)]
+rdg[, doy := yday(date)]
+
+rdg[
+  , offset_jul := yday(
+    as.Date(
+      paste(
+        year(date)
+        , "07"
+        , "01"
+        , sep = "-"
+      )
+    )
+  )
+]
+
+rdg[
+  , offset_dec := yday(
+    as.Date(
+      paste(
+        year(date) - 1
+        , "12"
+        , "31"
+        , sep = "-"
+      )
+    )
+  )
+]
+
+rdg[, doy := doy - offset_jul + 1L]
+rdg[doy <= 0, season := season - 1L]
+rdg[doy <= 0, doy := doy + offset_dec]
+rdg[, c("offset_jul", "offset_dec") := NULL]
+
+rdg[, lab := substring(date, first = 6)]
+```
+
+
+```{r}
+#| label: preparation
+#| include: false
+cbm2kwh = 0.9355 * 11.517 
+
+rdg[, use_pow_kwh := c(NA_real_, diff(rdg_pow))]
+rdg[, use_gas := c(NA_real_, diff(rdg_gas))]
+rdg[, use_gas_kwh := use_gas * cbm2kwh]
+
+rdg[, c("rdg_pow", "rdg_gas", "use_gas") := NULL]
+
+rdg[, cum_pow_kwh := use_pow_kwh]
+rdg[, cum_gas_kwh := use_gas_kwh]
+rdg[1L, cum_pow_kwh := 0]
+rdg[1L, cum_gas_kwh := 0]
+rdg[, cum_pow_kwh := cumsum(cum_pow_kwh), by = season]
+rdg[, cum_gas_kwh := cumsum(cum_gas_kwh), by = season]
+
+rdg = melt(
+  rdg
+  ,id.vars = c("date", "season", "doy", "lab")
+  , measure.vars = c("use_gas_kwh", "use_pow_kwh", "cum_gas_kwh", "cum_pow_kwh")
+  , value.name = "use"
+  , variable.name = "type"
+  , na.rm = TRUE
+)
+```
+
+```{r}
+#| label: plt-gas
+#| fig-width: 10
+#| fig-height: 8
+
+ggplot(
+  rdg[grep("gas", x = type)]
+  ,  mapping = aes(doy, y = use, color = factor(season), group = season)
+) + 
+  geom_line() + 
+  scale_x_continuous("") + 
+  scale_y_continuous("Consumption [kWh]") + 
+  scale_color_manual(
+    ""
+    , values = c(
+      "2022" = "gray80"
+      , "2023" = "gray20"
+    )
+  ) + 
+  facet_wrap(
+    "type"
+    , ncol = 1
+    , scales = "free_y"
+    , labeller = as_labeller(
+      c(
+        use_gas_kwh = "gas [kWh]"
+        , cum_gas_kwh = "gas [kWh]"
+      )
+    )
+  ) +
+  theme_bw() + 
+  theme(legend.position = "none")
+```
+
+```{r}
+#| label: plt-pow
+#| #| fig-width: 10
+#| fig-height: 8
+ggplot(
+  rdg[grep("pow", x = type)]
+  ,  mapping = aes(doy, y = use, color = factor(season), group = season)
+) + 
+  geom_line() + 
+  scale_x_continuous("") + 
+  scale_y_continuous("Consumption [kWh]") + 
+  scale_color_manual(
+    ""
+    , values = c(
+      "2022" = "gray80"
+      , "2023" = "gray20"
+    )
+  ) + 
+  facet_wrap(
+    "type"
+    , ncol = 1
+    , scales = "free_y"
+    , labeller = as_labeller(
+      c(
+        use_pow_kwh = "pow [kWh]"
+        , cum_pow_kwh = "pow [kWh]"
+      )
+    )
+  ) +
+  theme_bw() + 
+  theme(legend.position = "none")
+```
+
