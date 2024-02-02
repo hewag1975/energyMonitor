@@ -1,8 +1,7 @@
 ---
 title: "Weekly energy consumption"
 format: html
-theme: yeti
-editor: visual
+editor: source
 editor_options: 
   chunk_output_type: console
 ---
@@ -107,8 +106,7 @@ setnames(
 )
 ```
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## Natural gas
 
 ```{r}
@@ -204,5 +202,4 @@ ggplotly(
   , tooltip = c("Consumption", "Date", "Season")
 )
 ```
-
 :::
