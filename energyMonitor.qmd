@@ -135,7 +135,8 @@ ggplotly(
       ""
       , values = c(
         "2022" = "gray80"
-        , "2023" = "gray20"
+        , "2023" = "gray60"
+        , "2024" = "gray20"
       )
     ) + 
     facet_wrap(
@@ -183,7 +184,8 @@ ggplotly(
       ""
       , values = c(
         "2022" = "gray80"
-        , "2023" = "gray20"
+        , "2023" = "gray60"
+        , "2024" = "gray20"
       )
     ) + 
     facet_wrap(
