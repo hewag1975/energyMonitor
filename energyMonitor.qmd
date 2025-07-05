@@ -71,6 +71,11 @@ rdg[, lab := format(date, format = "%Y-%b-%d")]
 cbm2kwh = 0.9355 * 11.517 
 
 rdg[, use_pow_kwh := c(NA_real_, diff(rdg_pow))]
+rdg[
+  date >= "2025-06-20"
+  , use_pow_kwh := rdg_pow
+]
+
 rdg[, use_gas := c(NA_real_, diff(rdg_gas))]
 rdg[, use_gas_kwh := use_gas * cbm2kwh]
 
