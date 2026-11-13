@@ -70,9 +70,10 @@ rdg[, lab := format(date, format = "%Y-%b-%d")]
 #| include: false
 cbm2kwh = 0.9355 * 11.517 
 
+rdg[, date := as.character(date)]
 rdg[, use_pow_kwh := c(NA_real_, diff(rdg_pow))]
 rdg[
-  date == "2025-06-20"
+  date %in% as.Date(c("2025-06-20", "2026-11-13"))
   , use_pow_kwh := rdg_pow
 ]
 
